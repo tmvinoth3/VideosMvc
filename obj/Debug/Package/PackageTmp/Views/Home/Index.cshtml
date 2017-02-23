@@ -1,0 +1,199 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+
+<div id="createVideo">
+
+</div>
+
+<div id="videoTableoutput">
+
+</div>
+
+<div id="videoEditoutput">
+
+</div>
+
+<script id="videoTable" type="text/html">
+
+<table>
+<thead>
+<th>Title</th>
+<th>Length</th>
+</thead>
+<tbody>
+{{#each video}}
+<tr data-id={{id}}>
+<td>{{title}}</td>
+<td>{{length}}</td>
+<td>
+<button class="edit">Edit</button>
+<button id="delete">Delete</button>
+</td>
+</tr>
+{{/each}}
+</tbody>
+</table>
+</script>
+
+<script id="editVideo" type="text/html">
+<hr />
+<form>
+<label for="title">Title</label>
+{{#with video}}
+<input type="text" name="title" id="title" value={{title}} />
+<label for="length">Length</label>
+<input type="number" min="0" max="200" name="length" id="length" value = {{length}} />
+<input type="submit" id="save" value="Update"/>
+{{/with}}
+</form>
+</script>
+
+<script id="createVideoTemplate" type="text/html">
+<hr />
+<form>
+<label for="title">Title</label>
+<p>{{title}}</p>
+<input type="text" name="title" id="title1"/>
+<label for="length">Length</label>
+<input type="number" min="0" max="200" name="length" id="length1"/>
+<input type="submit" id="create" value="create"/>
+</form>
+</script>
+
+@section scripts{
+
+
+</script>
+    <script src="~/Scripts/handlebars.js" type="text/javascript"></script>
+<script>
+    var videoServer = (function () {
+        var videourl = '@Url.RouteUrl("DefaultApi", new {httproute="", controller = "Video"})';
+        $(document).ajaxError(function (event, xhr) {
+            alert(event.status + ":" + xhr.statusText);
+        });
+
+        var getvideos = function () {
+            return $.ajax(videourl);
+        };
+
+        var getvideo = function (id) {
+            return $.ajax(videourl + "/" + id,
+            {
+                dataType: "json"
+            }
+            );
+        };
+
+        var updatevideo = function (video) {
+            return $.ajax(videourl + "/" + video.id, {
+                type: "PUT",
+                data: video,
+                dataType: "json"
+            });
+        };
+
+        var createvideo = function (video) {
+            return $.ajax(videourl, {
+                type: "POST",
+                data: video,
+                dataType: "json"
+            });
+        };
+
+        var deletevideo = function (video) {
+            return $.ajax(videourl + "/" + video.id, {
+                type: "DELETE",
+                data: video,
+                dataType: "json"
+            });
+        };
+
+        return {
+            deletevideo: deletevideo,
+            createvideo: createvideo,
+            updatevideo: updatevideo,
+            getvideos: getvideos,
+            getvideo: getvideo
+        };
+    } ());
+
+    (function() {
+
+    var templeates = {};
+
+    var compileTemplates = function() {
+    templeates.videoTable = Handlebars.compile($("#videoTable").html());
+    templeates.videoEdit = Handlebars.compile($("#editVideo").html());
+    };
+
+    var showallVideos = function(data) {
+    var output = templeates.videoTable({video : data});
+    $("#videoTableoutput").html(output);
+    };
+
+    var showEditVideo = function (data) {
+        var output = templeates.videoEdit({ video: data });
+        $("#videoEditoutput").html(output);
+    };
+
+    var refreshVideos = function() {
+    videoServer.getvideos().done(showallVideos);
+    };
+
+    var clearEdit = function() {
+    $("#videoEditoutput").empty();
+    };
+
+
+
+    var wireEvents = function() {
+    var id;
+    templeates.createVideoTemplate = Handlebars.compile($("#createVideoTemplate").html());
+    $("#createVideo").html(templeates.createVideoTemplate);
+
+    $(document).on("click", "#create", function () {
+        var video = {
+            "title": $("#title1").val(),
+            "length": $("#length1").val()
+        };
+        videoServer.createvideo(video).done(refreshVideos, clearEdit);
+    });
+
+    $(document).on("click",".edit",function(){
+        id = getId(this);
+    videoServer.getvideo(id).done(showEditVideo);
+    });
+
+    $(document).on("click","#delete",function() {
+    var id = getId(this);
+    var video = { "id" : id};
+        videoServer.deletevideo(video).done(refreshVideos,clearEdit);
+    });
+
+    $(document).on("click","#save",function() {
+    var video = {
+    "id" : id,
+    "title":$("#title").val(),
+    "length":$("#length").val()
+    };
+    videoServer.updatevideo(video).done(refreshVideos,clearEdit);
+    return false;
+    });
+
+    };
+
+    var getId = function(element) {
+    return $(element).parents("tr").attr("data-id");
+    };
+
+    $(function(){
+    wireEvents();
+    compileTemplates();
+    refreshVideos();
+    });
+
+    }());
+</script>
+}
